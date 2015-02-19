@@ -1,28 +1,103 @@
-== README
+== Rails 4 - Alias names in includes() and joins() for active record quering
 
-This README would normally document whatever steps are necessary to get the
-application up and running.
+A question about this issue was post on stack overflow: http://stackoverflow.com/questions/28595636/rails-4-how-to-give-alias-names-to-includes-and-joins-in-active-record-que.
 
-Things you may want to cover:
+This gist has more information about the problem: https://gist.github.com/phlegx/add77d24ebc57f211e8b
 
-* Ruby version
+=== Model design
 
-* System dependencies
+- Model Student and model Teacher are both STI models with super class model User.
+- Model Story is a STI model with super class model Task.
+- Model Project has associations to all other models.
 
-* Configuration
+   class Project < ActiveRecord::Base
+     has_many :users
+     has_many :students
+     has_many :teachers
+     has_many :tasks
+     has_many :stories
+   end
+    
+   
+   class Task < ActiveRecord::Base
+     belongs_to :project
+   end
+   
+   
+   class Story < Task
+   end
+   
+   
+   class User < ActiveRecord::Base
+     belongs_to :project
+   end
+   
+   
+   class Student < User
+   end
+   
+   
+   class Teacher < User
+   end
+ 
+=== Rails alias naming convention (includes() and joins())
+ 
+- <b>One model as parameter</b>
+  - is base model (includes(:users))
+    - alias name is class name of base name (in plural)
+  - is STI model (includes(:students))
+    - alias name is class name of base name (in plural)
+ 
+- <b>More models as parameters</b>
+  - have more STI models with same base class name (includes(:students, :teachers))
+    - first parameter (STI) -> alias name is class name of base name (in plural)
+    - all other parameters (STI) -> alias name is {STI name plural}_projects
+  - One base model and one STI model with same base model (includes(:users, :teachers))
+    - first parameter (base) -> alias name is class name of base name (in plural)
+    - second parameter (STI) -> alias name is {STI name plural}_projects
+  - More STI models with different base model (includes(:students, :stories))
+    - alias name is class name of base name (in plural)
+ 
+<b>The alias name depends on the parameter order in includes() or joins() and if the parameters have another parameter with same base class.</b>
 
-* Database creation
+==== Case one (single STI model include)
+ 
+   # This examples works:
+   
+   Project.all.includes(:students).order('users.name ASC') # order on students
+   
+   Project.all.joins(:students).order('users.name ASC') # order on students
+   
+   # This examples fails
+   
+   Project.all.includes(:students).order('students.name ASC')
+   Project.all.includes(:students).order('students_projects.name ASC')
+   
+   Project.all.joins(:students).order('students.name ASC')
+   Project.all.joins(:students).order('students_projects.name ASC')
+ 
+==== Case two (double STI model include with same base model)
+ 
+   # This examples works:
+   
+   Project.all.includes(:students, :teachers).order('users.name ASC') # order on students
+   Project.all.includes(:students, :teachers).order('teachers_projects.name ASC') # order on teachers
+   Project.all.includes(:students, :stories).order('tasks.name ASC') # order on stories
+   
+   Project.all.joins(:students, :teachers).order('users.name ASC') # order on students
+   Project.all.joins(:students, :teachers).order('teachers_projects.name ASC') # order on teachers
+   Project.all.joins(:students, :stories).order('tasks.name ASC') # order on stories
+   
+   # This examples fails:
+   
+   Project.all.includes(:students, :teachers).order('teachers.name ASC')
+   Project.all.includes(:students, :teachers).order('students.name ASC')
+   Project.all.includes(:students, :teachers).order('students_projects.name ASC')
+   Project.all.includes(:students, :stories).order('stories.name ASC')
+   
+   Project.all.joins(:students, :teachers).order('teachers.name ASC')
+   Project.all.joins(:students, :teachers).order('students.name ASC')
+   Project.all.joins(:students, :teachers).order('students_projects.name ASC')
+   Project.all.joins(:students, :stories).order('stories.name ASC') 
 
-* Database initialization
 
-* How to run the test suite
-
-* Services (job queues, cache servers, search engines, etc.)
-
-* Deployment instructions
-
-* ...
-
-
-Please feel free to use a different markup language if you do not plan to run
-<tt>rake doc:app</tt>.
