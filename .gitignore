@@ -1,0 +1,26 @@
+.bundle
+db/*.sqlite3
+log/*.log
+tmp/**/*
+config/database.yml
+db/*.sqlite3
+db/*.sqlite3-journal
+# Vim
+*.swp
+*.dump
+coverage
+*.tmproj
+.DS_Store
+public/assets/
+public/uploads/
+chromedriver.log
+config/locales/.wti
+db/structure.sql
+.yardoc/
+.sass-cache
+.vagrant
+.project
+.secret.rvmrc
+tags
+erd.pdf
+doc/
